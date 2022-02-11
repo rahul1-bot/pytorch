@@ -1,6 +1,6 @@
 """Functionality for Python <-> C++ frontend inter-op."""
-
 from torch import nn
+from typing import *
 
 
 class OrderedDictWrapper(object):
@@ -13,12 +13,13 @@ class OrderedDictWrapper(object):
     using properties does not work.
     """
 
-    def __init__(self, cpp_module, attr):
+    def __init__(self, cpp_module: Module, attr: Any) -> None:
         self.cpp_module = cpp_module
         self.attr = attr
 
+
     @property
-    def cpp_dict(self):
+    def cpp_dict(self) -> None:
         return getattr(self.cpp_module, self.attr)
 
     # Magic methods cannot be assigned dynamically and bypass ``getattr``, so we
@@ -52,10 +53,10 @@ class ModuleWrapper(nn.Module):
     delegates all access.
     """
 
-    def __init__(self, cpp_module):
+    def __init__(self, cpp_module) -> None:
         # Assign before the super class constructor so ``self.training`` can be
         # assigned to in the super class constructor.
-        self.cpp_module = cpp_module
+        self.cpp_module: Module = cpp_module
         super(ModuleWrapper, self).__init__()
         self._parameters = OrderedDictWrapper(cpp_module, "_parameters")  # type: ignore[assignment]
         self._buffers: OrderedDictWrapper = OrderedDictWrapper(cpp_module, "_buffers")  # type: ignore[assignment]
@@ -65,7 +66,8 @@ class ModuleWrapper(nn.Module):
             if not attr.startswith("_"):
                 setattr(self, attr, getattr(self.cpp_module, attr))
 
-    def _apply(self, fn):
+
+    def _apply(self, fn: Callable[Any, [int, int]) -> ModuleWrapper:
         for param in self.parameters():
             # Tensors stored in modules are graph leaves, and we don't
             # want to create copy nodes, so we have to unpack the data.
@@ -78,10 +80,12 @@ class ModuleWrapper(nn.Module):
 
         return self
 
+
     # nn.Module defines training as a boolean
     @property  # type: ignore[override]
     def training(self):
         return self.cpp_module.training
+
 
     @training.setter
     def training(self, mode):
@@ -89,3 +93,6 @@ class ModuleWrapper(nn.Module):
 
     def __repr__(self):
         return self.cpp_module.__repr__()
+
+
+
